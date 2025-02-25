@@ -2,6 +2,7 @@ import simpy
 import random
 from scheduler.fcfs import FCFSScheduler
 from scheduler.sjf import SJFScheduler
+from scheduler.round_robin import RoundRobinScheduler
 
 
 # Simulation parameters
@@ -35,6 +36,8 @@ def run_simulation(scheduler_name):
         scheduler = FCFSScheduler(env, cpu)
     elif scheduler_name == "SJF":
         scheduler = SJFScheduler(env, cpu)
+    elif scheduler_name == "RoundRobin":
+        scheduler = RoundRobinScheduler(env, cpu, time_quantum=3)
     else:
         raise ValueError("Invalid scheduler name!")
     
@@ -46,6 +49,7 @@ def run_simulation(scheduler_name):
 def main():
     run_simulation("FCFS")
     run_simulation("SJF")
+    run_simulation("RoundRobin")
 
 if __name__ == '__main__':
     main()
