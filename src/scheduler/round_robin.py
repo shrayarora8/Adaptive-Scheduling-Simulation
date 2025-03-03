@@ -25,7 +25,6 @@ class RoundRobinScheduler:
 
                 print(f"{current_name} started execution at time {start_time:.2f} with {remaining_time} units left")
 
-                # Execute for given time slice
                 yield self.env.timeout(time_slice)
                 remaining_time -= time_slice
 
