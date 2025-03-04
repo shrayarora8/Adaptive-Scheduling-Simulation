@@ -4,6 +4,7 @@ from scheduler.fcfs import FCFSScheduler
 from scheduler.sjf import SJFScheduler
 from scheduler.round_robin import RoundRobinScheduler
 from scheduler.preemptive_sjf import PreemptiveSJFScheduler
+from scheduler.adaptive_rr import AdaptiveRoundRobinScheduler  
 import numpy as np
 
 
@@ -43,6 +44,8 @@ def run_simulation(scheduler_name):
         scheduler = RoundRobinScheduler(env, cpu, time_quantum=3)
     elif scheduler_name == "PreemptiveSJF":  
         scheduler = PreemptiveSJFScheduler(env, cpu)
+    elif scheduler_name == "AdaptiveRR":
+        scheduler = AdaptiveRoundRobinScheduler(env, cpu, adjust_interval=5, initial_quantum=10)
     else:
         raise ValueError("Invalid scheduler name!")
 
@@ -55,7 +58,8 @@ def main():
     #run_simulation("FCFS")
     #run_simulation("SJF")
     #run_simulation("RoundRobin")
-    run_simulation("PreemptiveSJF")
+    #run_simulation("PreemptiveSJF")
+    run_simulation("AdaptiveRR")
 
 if __name__ == '__main__':
     main()
