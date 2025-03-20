@@ -1,70 +1,84 @@
 import simpy
+from collections import deque
+import pandas as pd
+import matplotlib.pyplot as plt
+import math
 import numpy as np
 
 class AdaptiveRoundRobinScheduler:
-    def __init__(self, env, cpu, adjust_interval, initial_quantum=10, sensitivity=0.1):
+    def __init__(self, env, cpu, initial_time_quantum):
         self.env = env
         self.cpu = cpu
-        self.time_quantum = initial_quantum  
-        self.adjust_interval = adjust_interval  # How often we change the quantam based on the workload
-        self.process_queue = []
-        self.waiting_times = []  
-        self.last_adjustment_time = 0
-        self.min_quantum = 2  # Lower bound for time quantum
-        self.max_quantum = 50  # Upper bound for time quantum
-        self.sensitivity = sensitivity
-
-    def add_process(self, process):
-        self.process_queue.append(process)
-
-    def adjust_time_quantum(self):
-        print(f"[{self.env.now:.2f}] ⚡ DEBUG: Checking Quantum Adjustments | Queue Size: {len(self.waiting_times)}")
-        # collects atleast 5 data points for the processes in order to calculate average waiting time and make an 
-        # adaptive decison from there
-        if len(self.waiting_times) < 2:
-            print(f"[{self.env.now:.2f}] Not enough processes (Need 2, Have {len(self.waiting_times)}) - Skipping Adjustment")
-            return  
-
-        avg_waiting_time = np.mean(self.waiting_times[-5:])  
-        target_waiting_time = np.mean(self.waiting_times[-5:]) * 0.8 
-
-        # Dynamic adjustment formula
-        delta = self.sensitivity * 2 * (avg_waiting_time - target_waiting_time)
-        new_quantum = int(self.time_quantum + delta)
-        new_quantum = max(self.min_quantum, min(self.max_quantum, new_quantum))  # Ensure within bounds
-        if new_quantum != self.time_quantum:
-            print(f"\n[{self.env.now:.2f}] 🔄 Quantum Adjusted: {self.time_quantum} → {new_quantum} (Avg Wait Time: {avg_waiting_time:.2f} ms)\n")
-        self.time_quantum = new_quantum
-        print(f"⚡ IMMEDIATE QUANTUM UPDATE: New Quantum is now {self.time_quantum}")
-
+        self.initial_time_quantum = initial_time_quantum
+        self.ready_queue = deque()
+        self.completed_jobs = []
+        self.execution_log = []
+        self.prev_quantum = initial_time_quantum  # Track last quantum
 
     def process_task(self, name, burst_time):
         arrival_time = self.env.now
-        remaining_time = burst_time
-        if remaining_time == burst_time:
-            print(f"[{self.env.now:.2f}] {name} arrives | Burst Time: {burst_time} | Current Quantum: {self.time_quantum}")
+        self.ready_queue.append((name, burst_time, arrival_time))
 
-        while remaining_time > 0:
+        while self.ready_queue:
+            current_jobs = list(self.ready_queue)
+            remaining_times = [job[1] for job in current_jobs]
+
+            # Quantum Adjustment
+            new_quantum = (0.6 * self.prev_quantum) + (0.4 * np.median(remaining_times))
+            adaptive_quantum = max(5, int(new_quantum))  
+            self.prev_quantum = adaptive_quantum  # Update for next cycle
+
+            current_name, remaining_time, job_arrival_time = self.ready_queue.popleft()
+
             with self.cpu.request() as req:
                 yield req
-                execute_time = min(self.time_quantum, remaining_time)
-                yield self.env.timeout(execute_time)
-                remaining_time -= execute_time
 
-                print(f"[{self.env.now:.2f}] {name} executed for {execute_time}ms | Remaining: {remaining_time}ms | Quantum: {self.time_quantum}")
+                start_time = self.env.now
+                time_slice = min(adaptive_quantum, remaining_time)
+                yield self.env.timeout(time_slice)
+                end_time = self.env.now
 
-            if remaining_time > 0:
-                print(f"[{self.env.now:.2f}] {name} preempted, re-entering queue with {remaining_time}ms left.")
-                self.env.timeout(1)  # Short delay before rescheduling
-                self.env.process(self.process_task(name, remaining_time))
+                remaining_time -= time_slice
 
+                self.execution_log.append({
+                    "Job": current_name,
+                    "Start": start_time,
+                    "Finish": end_time,
+                    "Time Slice": time_slice,
+                    "Remaining Time": remaining_time,
+                    "Quantum Used": adaptive_quantum,
+                    "Completed": remaining_time == 0
+                })
 
-        completion_time = self.env.now
-        turnaround_time = completion_time - arrival_time
-        waiting_time = turnaround_time - burst_time
-        self.waiting_times.append(waiting_time)
-        if len(self.waiting_times) >= 2 and (len(self.waiting_times) % 2 == 0 or self.env.now - self.last_adjustment_time >= self.adjust_interval):
-            self.adjust_time_quantum()
-            self.last_adjustment_time = self.env.now
-        print(f"[{self.env.now:.2f}] {name} completed | Turnaround: {turnaround_time}ms | Waiting: {waiting_time}ms")
+                if remaining_time > 0:
+                    if remaining_time < adaptive_quantum:
+                        self.ready_queue.appendleft((current_name, remaining_time, job_arrival_time))
+                    else:
+                        self.ready_queue.append((current_name, remaining_time, job_arrival_time))
+                else:
+                    completion_time = end_time
+                    turnaround_time = completion_time - job_arrival_time
+                    waiting_time = turnaround_time - burst_time
 
+                    self.execution_log.append({
+                        "Job": current_name,
+                        "Start": start_time,
+                        "Finish": end_time,
+                        "Time Slice": time_slice,
+                        "Remaining Time": 0,
+                        "Quantum Used": adaptive_quantum,
+                        "Completed": True,
+                        "turnaround_time": turnaround_time,
+                        "waiting_time": waiting_time,
+                        "burst_time": burst_time
+                    })
+
+                    self.completed_jobs.append({
+                        "name": current_name,
+                        "arrival_time": job_arrival_time,
+                        "start_time": start_time,
+                        "completion_time": completion_time,
+                        "turnaround_time": turnaround_time,
+                        "waiting_time": waiting_time,
+                        "burst_time": burst_time
+                    })
