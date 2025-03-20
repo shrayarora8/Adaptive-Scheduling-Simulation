@@ -24,14 +24,14 @@ This project was developed as part of ECS 251 – Operating Systems to analyze t
 
 ## How to Set Up and Run the Project Locally
 
-### **Install Python **
+### Install Python
 Make sure you have **Python 3.8 or higher** installed. If not, install it from:  
 🔗 [Python Downloads](https://www.python.org/downloads/)  
 
-### **Clone this repository **
+### Clone this repository
 Open a terminal and run the following commands: git clone https://github.com/shrayarora8/Adaptive-Scheduling-Simulation.git
 
-### **Set Up a Virtual Environment **
+### Set Up a Virtual Environment
 Create and activate a virtual environment as follows:
 cd Adaptive-Scheduling-Simulation
 python -m venv venv  
@@ -41,16 +41,16 @@ venv\Scripts\activate  # Windows
 Once done, install required dependencies like:
 pip install simpy streamlit plotly pandas
 
-### **Download and Place the Dataset **
+### Download and Place the Dataset
 Since GitHub does not allow files larger than 100MB, the dataset must be manually downloaded and placed in the correct location.
 1. Download the dataset from Google Drive: https://drive.google.com/file/d/1EI16GfKXVSyd3xSmoR9WEkHnDRB8_fDR/view?usp=sharing
 2. Move the file into the src/ folder inside your cloned repository
 
-### **Run the Scheduling Simulation (Command-Line Mode) **
+### Run the Scheduling Simulation (Command-Line Mode)
 To execute the scheduling simulation without the dashboard, run: python simulation.py
 This will run the scheduling framework in the terminal and log execution details
 
-### **Launch the Dashboard (Visualization Mode) **
+### Launch the Dashboard (Visualization Mode)
 To visualize scheduling performance with Gantt charts and statistics, run: streamlit run dashboard.py
 This will start a web-based dashboard where you can select a scheduler, view process execution, and analyze results.
 
